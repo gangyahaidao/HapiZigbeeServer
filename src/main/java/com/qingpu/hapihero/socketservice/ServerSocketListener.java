@@ -7,7 +7,6 @@ import javax.servlet.annotation.WebListener;
 
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
-import com.qingpu.hapihero.device.dao.ICoordinatorDeviceDao;
 import com.qingpu.hapihero.device.dao.IEndDeviceDao;
 import com.qingpu.hapihero.device.dao.IRastberryDeviceDao;
 
@@ -33,10 +32,9 @@ public class ServerSocketListener implements ServletContextListener {
 			ServletContext context = sce.getServletContext();
 
 			IRastberryDeviceDao rastberryDao = WebApplicationContextUtils.getWebApplicationContext(context).getBean(IRastberryDeviceDao.class);
-			ICoordinatorDeviceDao coordDao = WebApplicationContextUtils.getWebApplicationContext(context).getBean(ICoordinatorDeviceDao.class);
 			IEndDeviceDao endDao = WebApplicationContextUtils.getWebApplicationContext(context).getBean(IEndDeviceDao.class);
 
-			socketService = new ServerSocketThread(rastberryDao, coordDao, endDao); // 启动节点ServerSocket
+			socketService = new ServerSocketThread(rastberryDao, endDao); // 启动节点ServerSocket
 			//启动主线程
 			socketService.start();
         }

@@ -3,9 +3,7 @@ package com.qingpu.hapihero.socketservice;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -13,16 +11,12 @@ import org.slf4j.LoggerFactory;
 
 import com.qingpu.hapihero.common.utils.DataProcessUtils;
 import com.qingpu.hapihero.common.utils.QingpuConstants;
-import com.qingpu.hapihero.device.dao.ICoordinatorDeviceDao;
 import com.qingpu.hapihero.device.dao.IEndDeviceDao;
 import com.qingpu.hapihero.device.dao.IRastberryDeviceDao;
-import com.qingpu.hapihero.device.entity.EndDevice;
-import com.qingpu.hapihero.socketservice.ClientRastberryDeviceSocket.EndDeviceItem;
 
 public class ProcessSocketDataThread extends Thread{
 	private Socket client;
 	private IRastberryDeviceDao rastberryDao;
-	private ICoordinatorDeviceDao coordDao;
 	private IEndDeviceDao endDao;
 	
 	private Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -31,10 +25,9 @@ public class ProcessSocketDataThread extends Thread{
 		// empty
 	}
 	
-	public ProcessSocketDataThread(Socket client, IRastberryDeviceDao rastberryDao, ICoordinatorDeviceDao coordDao, IEndDeviceDao endDao) {
+	public ProcessSocketDataThread(Socket client, IRastberryDeviceDao rastberryDao, IEndDeviceDao endDao) {
 		this.client = client;
 		this.rastberryDao = rastberryDao;
-		this.coordDao = coordDao;
 		this.endDao = endDao;
 	}
 
@@ -142,16 +135,11 @@ public class ProcessSocketDataThread extends Thread{
 						logger.debug("@@rastberry first reg");
 						deviceSocket = new ClientRastberryDeviceSocket();						
 						deviceSocket.setMachineId(machineId);
-						deviceSocket.setEndDeviceItemList(new ArrayList<ClientRastberryDeviceSocket.EndDeviceItem>()); // 初始化终端设备列表
 					}
 					deviceSocket.setClient(getClient());
 					deviceSocket.setProcessDataThread(this);
 					deviceSocket.setPreHeartDate(new Date());
-					deviceSocket.setTimeout(false); // 设置为没有超时状态
-					
-					deviceSocket.setCoorOnline(false); // 初始时协调器离线，协调器发送心跳时置为上线状态
-					deviceSocket.setCoorNetworkReady(false); // 初始网络置为无状态
-					
+					deviceSocket.setTimeout(false); // 设置为没有超时状态					
 					ServerSocketThread.rastberryMachineMap.put(machineId, deviceSocket); // 将树莓派连接对象接入map中				
 				} else if(cmd == QingpuConstants.RASTBERRY_HEART_BEAT) { // 树莓派心跳
 					ClientRastberryDeviceSocket deviceSocket = ServerSocketThread.getRastDeviceConnectObj(getClient());
@@ -162,77 +150,15 @@ public class ProcessSocketDataThread extends Thread{
 					}
 				}
 				//*****************************************
-				//协调器命令处理
-				//*****************************************
-				else if(cmd == QingpuConstants.COORD_HEART_BEAT) { // 协调器心跳
-					ClientRastberryDeviceSocket deviceSocket = ServerSocketThread.getRastDeviceConnectObj(getClient());
-					if(deviceSocket != null) {
-						deviceSocket.setCoorOnline(true); // 设置为在线状态
-						deviceSocket.setCoorPreHeartDate(new Date()); // 更新收到心跳的时间
-						ServerSocketThread.rastberryMachineMap.put(deviceSocket.getMachineId(), deviceSocket);
-					}
-				} else if(cmd == QingpuConstants.COORD_NETWORK_READY) { // 协调器网络准备好
-					ClientRastberryDeviceSocket deviceSocket = ServerSocketThread.getRastDeviceConnectObj(getClient());
-					if(deviceSocket != null) {
-						deviceSocket.setCoorNetworkReady(true); // 设置协调器网络准备完毕
-						ServerSocketThread.rastberryMachineMap.put(deviceSocket.getMachineId(), deviceSocket);
-					}
-				}
-				//*****************************************
 				//终端命令处理
 				//*****************************************
-				else if(cmd == QingpuConstants.END_JOIN_NETWORK // 终端设备加入网络，消息内容：一个字节deviceNum + 2字节短地址 + 8个字节长地址
-						|| cmd == QingpuConstants.END_OFFLINE	// 终端设备离线，消息内容：deviceNum
-						|| cmd == QingpuConstants.END_ONLINE_AGAIN) // 终端再次上线：deviceNum + 2字节短地址 
+				else if(cmd == QingpuConstants.END_REGISTER_TO_SERVER) // 终端设备使用按键Key1注册到数据库，消息内容：一个字节deviceNum
 				{
-					ClientRastberryDeviceSocket deviceSocket = ServerSocketThread.getRastDeviceConnectObj(getClient());
-					if(deviceSocket != null) {
-						boolean findDevItem = false;
-						int index = -1;
-						EndDeviceItem devItem = null;
-						
-						List<EndDeviceItem> endItemList = deviceSocket.getEndDeviceItemList();
-						for(int i = 0; i < endItemList.size(); i++) {
-							EndDeviceItem item = endItemList.get(i);
-							if(item.getDeviceNum() == content[0]) { // 根据设备编号找到该终端设备
-								findDevItem = true;
-								index = i;
-								devItem = item;
-								break;
-							}
-						}
-						if(findDevItem) { // 如果在列表中找到设备
-							if(cmd == QingpuConstants.END_JOIN_NETWORK) {
-								devItem.setOnline(true);
-								System.arraycopy(content, 1, devItem.getShortAddr(), 0, 2); // 复制短地址到数组中
-								System.arraycopy(content, 3, devItem.getLongAddr(), 0, 8); // 长地址复制到数组中																
-							} else if(cmd == QingpuConstants.END_OFFLINE) {
-								devItem.setOnline(false);
-							} else if(cmd == QingpuConstants.END_ONLINE_AGAIN) {
-								devItem.setOnline(true);
-								System.arraycopy(content, 1, devItem.getShortAddr(), 0, 2); // 复制短地址到数组中
-							}
-							endItemList.add(index, devItem); // 更新元素
-						} else {
-							devItem = deviceSocket.new EndDeviceItem();
-							
-							if(cmd == QingpuConstants.END_JOIN_NETWORK) {
-								devItem.setOnline(true);
-								devItem.setDeviceNum(content[0]);
-								System.arraycopy(content, 1, devItem.getShortAddr(), 0, 2); // 复制短地址到数组中
-								System.arraycopy(content, 3, devItem.getLongAddr(), 0, 8); // 长地址复制到数组中																
-							} else if(cmd == QingpuConstants.END_OFFLINE) {
-								devItem.setOnline(false);
-							} else if(cmd == QingpuConstants.END_ONLINE_AGAIN) {
-								devItem.setOnline(true);
-								System.arraycopy(content, 1, devItem.getShortAddr(), 0, 2); // 复制短地址到数组中
-							}
-							endItemList.add(devItem); // 添加新的元素
-						}
-					}					
-				} else if(cmd == QingpuConstants.END_OFFLINE) { // 终端设备离线命令 
+					logger.debug("@end device use key to register to server");
+					// 先判断是否存在指定编号的设备，否则新建一条记录
 					
-				} else if(cmd == QingpuConstants.END_ONLINE_AGAIN) { // 
+				} else if(cmd == QingpuConstants.END_REPLY_RECVED_COIN) { // 终端设备回复收到投币命令，消息内容：一个字节的deviceNum
+					logger.debug("@end device replay get coin cmd");
 					
 				}
 			}

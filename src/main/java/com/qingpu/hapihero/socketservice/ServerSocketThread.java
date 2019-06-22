@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.qingpu.hapihero.device.dao.ICoordinatorDeviceDao;
 import com.qingpu.hapihero.device.dao.IEndDeviceDao;
 import com.qingpu.hapihero.device.dao.IRastberryDeviceDao;
 
@@ -21,18 +20,16 @@ public class ServerSocketThread extends Thread{
 	private ServerSocket serverSocket;
 	private static final int SERVERPORT = 18888;
 	private IRastberryDeviceDao rastberryDao;
-	private ICoordinatorDeviceDao coordDao;
 	private IEndDeviceDao endDao;
 
 	public static Map<String, ClientRastberryDeviceSocket> rastberryMachineMap = new HashMap<String, ClientRastberryDeviceSocket>(); // 用于存储售货机器人的socket连接，key值为机器上传的心跳中包含的编号值
 		
-	public ServerSocketThread(IRastberryDeviceDao rastberryDao, ICoordinatorDeviceDao coordDao, IEndDeviceDao endDao){
+	public ServerSocketThread(IRastberryDeviceDao rastberryDao, IEndDeviceDao endDao){
 		try {
 			if (null == serverSocket) {
 				this.serverSocket = new ServerSocket(SERVERPORT);  // "120.24.175.156", 9877
 			}
 			this.rastberryDao = rastberryDao;
-			this.coordDao = coordDao;
 			this.endDao = endDao;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -89,7 +86,7 @@ public class ServerSocketThread extends Thread{
 				client.setTcpNoDelay(true);//立即发送数据
 				client.setKeepAlive(true);//当长时间未能发送数据，服务器主动断开连接
 				//创建新的客户端线程处理请求，如果请求鉴权通过就加入到在线客户端列表中，如果不通过则销毁
-				ProcessSocketDataThread client_thread = new ProcessSocketDataThread(client, rastberryDao, coordDao, endDao);
+				ProcessSocketDataThread client_thread = new ProcessSocketDataThread(client, rastberryDao, endDao);
 				//启动子线程
 				client_thread.start();
 			}
