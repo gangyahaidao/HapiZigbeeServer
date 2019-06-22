@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Coderthemes">
+    <link rel="shortcut icon" th:href="@{/assets/images/favicon_1.ico}">
+    <title>微信支付</title>
+
+    <link rel="stylesheet" type="text/css" th:href="@{/css/weui.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/css/weuix.css}" />
+    <script th:src="@{/js/zepto.min.js}"></script>
+    <script th:inline="javascript">
+        function callpay(){
+            WeixinJSBridge.invoke('getBrandWCPayRequest',{
+                "appId": [[${appid}]],"timeStamp": [[${timeStamp}]], "nonceStr": [[${nonceStr}]], "package": [[${package}]], "signType": "MD5","paySign": [[${sign}]]
+            },function(res){
+                WeixinJSBridge.log(res.err_msg);
+                if(res.err_msg == "get_brand_wcpay_request:ok"){
+                    // alert("微信支付成功!");
+                    WeixinJSBridge.invoke('closeWindow',{},function(res){
+                        alert(res.err_msg);
+                    });
+                }else if(res.err_msg == "get_brand_wcpay_request:cancel"){
+                    console.log("用户取消支付");
+                }else{
+                    alert("支付失败");
+                }
+            })
+        }
+
+        function toastAuto(toastmessage){ //弹出自动消失弹框
+            var $toast = $("#toast");
+            if ($toast.css('display') != 'none') return;
+            $("#toastmessage").html(toastmessage);
+            $toast.fadeIn(100);
+            setTimeout(function () {
+                $toast.fadeOut(100);
+            }, 2000);
+        }
+
+        $(function(){
+            toastAuto("请稍后");
+            if (typeof window.WeixinJSBridge == "undefined") {
+                $(document).on('WeixinJSBridgeReady', function() {
+                    callpay();
+                });
+            }else{
+                callpay();
+            }
+        });
+    </script>
+</head>
+<body ontouchstart class="page-bg">
+    <div class="weui-cells__title" style="text-align: center;">
+        <div class="icon-box">
+            <i class="weui-icon-info weui-icon_msg"></i>
+        </div>
+        <div class="icon-box__ctn">
+            <h3 class="icon-box__title">付款</h3>
+        </div>
+    </div>
+
+    <div class="weui-footer weui-footer_fixed-bottom">
+        <p class="weui-footer__text">Copyright 2019 &copy; 擎谱集团</p>
+    </div>
+
+    <!--BEGIN toast-->
+    <div id="toast" style="display: none;">
+        <div class="weui-mask_transparent"></div>
+        <div class="weui-toast">
+            <i class="weui-loading weui-icon_toast"></i>
+            <p class="weui-toast__content" id="toastmessage"></p>
+        </div>
+    </div>
+</body>
+</html>

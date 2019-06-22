@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Coderthemes">
+    <link rel="shortcut icon" th:href="@{/assets/images/favicon_1.ico}">
+    <title>扫码支付</title>
+
+    <link rel="stylesheet" type="text/css" th:href="@{/css/weui.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/css/weuix.css}" />
+    <script th:src="@{/js/zepto.min.js}"></script>
+    <script>
+        $(function(){
+            $("#pay").on("click", function() {
+                toastWaiting("正在处理");
+            });
+        });
+
+        //转圈圈弹框
+        function toastWaiting(toastmessage){
+            var $toast = $("#loadingToast");
+            if ($toast.css('display') != 'none') return;
+            $("#toastloadingmessage").html(toastmessage);
+            $toast.fadeIn(100);
+            setTimeout(function () {
+                $toast.fadeOut(100);
+            }, 3000);
+        }
+    </script>
+</head>
+<body ontouchstart class="page-bg">
+    <div class="page-hd">
+        <h1 class="page-hd-title">
+            微信扫码付款
+        </h1>
+        <p class="page-hd-desc">请支付选购的零售商品</p>
+    </div>
+
+    <div class="weui-pay">
+        <h1 class="weui-payselect-title">支付金额</h1>
+        <p class="weui-pay-num">￥<span th:text="${totalMoney}"></span></p>
+        <ul class="weui-pay-u">
+            <li>
+                <span class="title">收款方</span>
+                <span class="content">擎谱集团G58商场</span>
+            </li>
+            <li>
+                <span class="title">出货机器</span>
+                <span class="content">G58商场三楼零售机器人</span>
+            </li>
+            <li>
+                <span class="title">购买商品</span>
+                <span class="content" th:text="${goodsNames}"></span>
+            </li>
+            <li>
+                <span class="title">下单时间</span>
+                <span class="content" th:text="${dateStr}"></span>
+            </li>
+        </ul>
+        <div class="pay-div">
+            <!--<a th:href="@{'/userweixin/weixinPayRequest?totalMoney='+${totalMoney}+'&orderId='+${orderId}+'&openid='+${openid}}" class="weui-btn weui-btn_primary" id="pay">立即支付</a>-->
+            <a th:href="@{/userweixin/weixinPayRequest(totalMoney=${totalMoney},orderId=${orderId},openid=${openid})}" class="weui-btn weui-btn_primary" id="pay">立即支付</a>
+        </div>
+    </div>
+
+    <div class="weui-footer weui-footer_fixed-bottom">
+        <p class="weui-footer__text">Copyright 2019 &copy; 擎谱集团</p>
+    </div>
+
+    <!-- loading toast -->
+    <div id="loadingToast" style="display:none;">
+        <div class="weui-mask_transparent"></div>
+        <div class="weui-toast">
+            <i class="weui-loading weui-icon_toast"></i>
+            <p class="weui-toast__content" id="toastloadingmessage"></p>
+        </div>
+    </div>
+</body>
+</html>
