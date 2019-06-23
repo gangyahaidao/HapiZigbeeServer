@@ -132,12 +132,11 @@ public class DataProcessUtils {
 	 * 检验数据
 	 * */
 	public static boolean checkMessage(byte[] data) {
-		byte receivedCheck = data[data.length-2];
-		
-		byte checkXOR = data[1];
-		
-		for (int i = 2; i <data.length-2; i++) {  
-			checkXOR ^=data[i];  
+		byte receivedCheck = data[data.length-2];		
+		byte checkXOR = data[1];		
+		for (int i = 2; i < data.length-2; i++) {  
+			checkXOR ^=data[i];
+			// System.out.println("i = " + i + ", checkXOR = " + checkXOR);
 	    }
 		if(checkXOR == receivedCheck)
 			return true;

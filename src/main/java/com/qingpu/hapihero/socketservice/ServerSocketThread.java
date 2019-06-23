@@ -10,6 +10,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.qingpu.hapihero.device.dao.IEndDeviceDao;
 import com.qingpu.hapihero.device.dao.IRastberryDeviceDao;
 
@@ -23,6 +26,7 @@ public class ServerSocketThread extends Thread{
 	private IEndDeviceDao endDao;
 
 	public static Map<String, ClientRastberryDeviceSocket> rastberryMachineMap = new HashMap<String, ClientRastberryDeviceSocket>(); // 用于存储售货机器人的socket连接，key值为机器上传的心跳中包含的编号值
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
 		
 	public ServerSocketThread(IRastberryDeviceDao rastberryDao, IEndDeviceDao endDao){
 		try {
@@ -78,13 +82,14 @@ public class ServerSocketThread extends Thread{
 	@Override
 	public void run(){
 		try {			
-			System.out.println("@@FxiedRobotSys Socket started, port = " + SERVERPORT);
+			logger.debug("@@FxiedRobotSys Socket started, port = " + SERVERPORT);
 			new ProcessHeartBeatClientThread().start(); // 启动货柜连接心跳监测线程
 			while(!this.isInterrupted()){
 				//如果主socket没有被中断
 				Socket client = serverSocket.accept();//阻塞等待客户端的连接
 				client.setTcpNoDelay(true);//立即发送数据
 				client.setKeepAlive(true);//当长时间未能发送数据，服务器主动断开连接
+				client.setSoTimeout(6000); // 设置读取阻塞的超时时间
 				//创建新的客户端线程处理请求，如果请求鉴权通过就加入到在线客户端列表中，如果不通过则销毁
 				ProcessSocketDataThread client_thread = new ProcessSocketDataThread(client, rastberryDao, endDao);
 				//启动子线程
@@ -126,7 +131,7 @@ public class ServerSocketThread extends Thread{
 						//如果当前时间 - 上一次收到心跳的时间 >= 3000ms
 						if((new Date().getTime() - beat.getPreHeartDate().getTime()) >= 1000*5){ //秒	
 							if(!beat.isTimeout()) { // 如果还没有设置为超时
-								System.out.println("@@货柜socket线程心跳超时，移除客户端 machineId = " + key);
+								logger.debug("@@货柜socket线程心跳超时，移除客户端 machineId = " + key);
 								beat.setTimeout(true);
 								beat.getProcessDataThread().closeClient();//关闭连接socket和释放线程
 								// it.remove();//从在线列表中移除								
