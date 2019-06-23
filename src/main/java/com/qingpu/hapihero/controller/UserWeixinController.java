@@ -2,12 +2,16 @@ package com.qingpu.hapihero.controller;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import com.qingpu.hapihero.common.utils.BackToWeiXin;
@@ -21,6 +25,9 @@ import com.qingpu.hapihero.common.utils.RequestHandler;
 import com.qingpu.hapihero.common.utils.Sha1Util;
 import com.qingpu.hapihero.common.utils.TenpayUtil;
 import com.qingpu.hapihero.common.utils.WeiXinUtils;
+import com.qingpu.hapihero.socketservice.ClientRastberryDeviceSocket;
+import com.qingpu.hapihero.socketservice.ResponseSocketUtils;
+import com.qingpu.hapihero.socketservice.ServerSocketThread;
 import com.qingpu.hapihero.user.dao.IUserWeixinOriginalDao;
 import com.qingpu.hapihero.user.entity.UserWeixinOriginal;
 
@@ -44,6 +51,40 @@ public class UserWeixinController extends HandlerInterceptorAdapter {
     @Autowired
     IUserWeixinOriginalDao userWeixinOriginalDao;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
+    
+    @ApiOperation("手机扫码测试投币动作")
+    @RequestMapping("/addCoin")
+    public String addCoin() {
+    	return "addCoin";
+    }
+    
+    @ResponseBody
+    @RequestMapping("/startGame")
+    public String startGame(@RequestBody String body) {
+    	JSONObject retJsonObj = new JSONObject();
+    	retJsonObj.put("code", 0);
+    	
+    	if(body != null && body != ""){
+			JSONObject jsonObj = new JSONObject(body);
+			int globalCoinNum = jsonObj.getInt("globalCoinNum"); 
+			logger.debug("@globalCoinNum = " + globalCoinNum);
+			synchronized (ServerSocketThread.rastberryMachineMap) {
+				ClientRastberryDeviceSocket deviceSocket = ServerSocketThread.rastberryMachineMap.get("1");
+				if(deviceSocket != null) {
+					byte[] content = new byte[2];
+					content[0] = 0x01; // 设备编号
+					content[1] = (byte) globalCoinNum;
+					ResponseSocketUtils.sendBytesToSocket(content, deviceSocket.getClient(), QingpuConstants.TO_PAY_COIN, QingpuConstants.ENCRYPT_BY_NONE);					
+				} else {
+					retJsonObj.put("code", -1);
+				}				
+			}					
+    	}
+    	    	    	
+    	logger.debug("@retJsonObj.toString() = " + retJsonObj.toString());
+    	return retJsonObj.toString();
+    }
+    
 
     @ApiOperation("获取扫码用户详细信息接口1")
     @RequestMapping("/getUserInfoStep1")

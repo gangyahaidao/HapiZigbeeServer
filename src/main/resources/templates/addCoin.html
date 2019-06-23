@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Coderthemes">
+    <link rel="shortcut icon" th:href="@{/assets/images/favicon_1.ico}">
+    <title>微信支付</title>
+
+    <link rel="stylesheet" type="text/css" th:href="@{/css/weui.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/css/weuix.css}" />
+    <script th:src="@{/js/zepto.min.js}"></script>
+</head>
+<body ontouchstart class="page-bg">
+	<div class="page-hd">
+	    <h1 class="page-hd-title">
+	        游戏投币
+	    </h1>
+	    <p class="page-hd-desc"></p>
+	</div>
+	<div class="weui-cells">
+	    <div class="weui-cell">
+	        <div class="weui-cell__bd">
+	            <p>投币个数</p>
+	        </div>
+	        <div class="weui-cell__ft">
+	            <div class="weui-count">
+	                <a class="weui-count__btn weui-count__decrease"></a>
+	                <input class="weui-count__number" type="number" value="1" />
+	                <a class="weui-count__btn weui-count__increase"></a>
+	            </div>
+	        </div>
+	    </div>	    
+	</div>
+	<br/><br/><br/>
+    <div class="weui-btn-area">
+	    <a class="weui-btn weui-btn_primary" href="javascript:" id="btn">启动</a>
+	</div>
+	
+	<script>
+	    var MAX = 10, MIN = 1;
+	    var globalCoinNum = 1;
+	    $('.weui-count__decrease').click(function (e) {
+	        var $input = $(e.currentTarget).parent().find('.weui-count__number');
+	        var number = parseInt($input.val() || "0") - 1
+	        if (number < MIN) number = MIN;
+	        $input.val(number)
+	        globalCoinNum = number;
+	    })
+	    $('.weui-count__increase').click(function (e) {
+	        var $input = $(e.currentTarget).parent().find('.weui-count__number');
+	        var number = parseInt($input.val() || "0") + 1
+	        if (number > MAX) number = MAX;
+	        $input.val(number)
+	        globalCoinNum = number;
+	    })
+	    
+	    $(document).on("click","#btn",function(){
+            $.ajax({
+				type: "POST",
+				url: "/FxiedRobotSys/userweixin/startGame",
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				data: JSON.stringify({
+					globalCoinNum: globalCoinNum
+				}),
+				success: function(data) {
+					// console.log(JSON.stringify(data));
+					if(data.code == 0) {
+						alert("投币成功");	
+					} else {
+						alert("失败,游戏机未连接");
+					}
+				},
+				error: function(XMLHttpResponse, textStatus, errorThrown) {
+					//alert(errorThrown);
+				}
+			});
+            
+        })
+    </script>	
+
+    <div class="weui-footer weui-footer_fixed-bottom">
+        <p class="weui-footer__text">Copyright 2019 &copy; 擎谱集团</p>
+    </div>
+</body>
+</html>
